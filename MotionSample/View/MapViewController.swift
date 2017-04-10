@@ -29,6 +29,9 @@ class MapViewController: UIViewController {
         
         locationManager = CLLocationManager()
         locationManager.delegate = self
+        if #available(iOS 9.0, *) {
+            locationManager.allowsBackgroundLocationUpdates = true
+        }
         
         let tokyoStationCoodinate = CLLocationCoordinate2DMake(35.681382, 139.766084)
         mapView.region = MKCoordinateRegionMake(tokyoStationCoodinate, MKCoordinateSpanMake(0.1, 0.1))
@@ -83,15 +86,19 @@ extension MapViewController: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         let location = locations.last
         guard let coordinate = location?.coordinate else {
+            print("didUpdateLocations *** no coordinate ***")
             return
         }
+        
+        print("didUpdateLocations lat: \(coordinate.latitude), lon: \(coordinate.longitude)")
         
         logFileManager.lastLocation = location
         
         if CLLocationCoordinate2DIsValid(coordinate) {
             // 初回の測位では現在地にフォーカスする
             if !alreadyStartingCoordinateSet {
-                mapView.setRegion(MKCoordinateRegionMake(coordinate, MKCoordinateSpanMake(0.01, 0.01)), animated: true)
+                let tokyoStationCoodinate = CLLocationCoordinate2DMake(35.681382, 139.766084)
+                mapView.setRegion(MKCoordinateRegionMake(tokyoStationCoodinate, MKCoordinateSpanMake(0.01, 0.01)), animated: true)
                 alreadyStartingCoordinateSet = true
             }
         }
@@ -99,17 +106,9 @@ extension MapViewController: CLLocationManagerDelegate {
     
     /// 許諾変更の通知
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-        print("didChangeAuthorization: \(status.rawValue)")
+        print("didChangeAuthorization status: \(status.rawValue)")
         switch status {
-        case .authorizedWhenInUse:
-            let alertController = UIAlertController(title: "位置情報サービス設定",
-                                                    message: "このAppの使用中しか許可されていないため、バックグラウンドではログが保存されません。バックグラウンドでも保存するには、位置情報サービスを常に許可に設定してください",
-                                                    preferredStyle: .alert)
-            let action = UIAlertAction(title: "OK", style: .default, handler: nil)
-            alertController.addAction(action)
-            self.present(alertController, animated: true, completion: nil)
-            fallthrough
-        case .authorizedAlways:
+        case .authorizedAlways, .authorizedWhenInUse:
             locationManager.startUpdatingLocation()
             mapView.showsUserLocation = true
         default:

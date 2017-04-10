@@ -25,8 +25,19 @@ class MotionViewController: UIViewController {
     private var motionActivityManager: CMMotionActivityManager?
     /// ログ書き込みに失敗したら1度だけアラートを表示させる
     private var isAppendLogError = false
+    /// バックグラウンドで更新されたデータをフォアグランドに戻った時にviewへ反映できるよう取っておく
+    private var bgActivity: CMMotionActivity?
     
     // MARK: - View Life Cycle
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(self.applicationWillEnterForeground(_:)),
+                                               name: NSNotification.Name.UIApplicationWillEnterForeground,
+                                               object: nil)
+    }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
@@ -43,34 +54,67 @@ class MotionViewController: UIViewController {
         }
         
         motionActivityManager = CMMotionActivityManager()
-        motionActivityManager?.startActivityUpdates(to: OperationQueue.main, withHandler: { [weak self] (motionActivity: CMMotionActivity?) -> Void in
+        motionActivityManager?.startActivityUpdates(to: OperationQueue(), withHandler: { [weak self] (motionActivity: CMMotionActivity?) -> Void in
             guard let activity = motionActivity, let `self` = self else {
+                print("didUpdateMotionActivity *** no data ***")
                 return
             }
             
-            self.stationaryLabel.textColor = activity.stationary.color
-            self.walkingLabel.textColor = activity.walking.color
-            self.runningLabel.textColor = activity.running.color
-            self.automotiveLabel.textColor = activity.automotive.color
-            self.cyclingLabel.textColor = activity.cycling.color
-            self.unknownLabel.textColor = activity.unknown.color
+            print("didUpdateMotionActivity date: \(activity.startDate)")
             
-            self.confidenceLabel.text = activity.confidence.description
+            if UIApplication.shared.applicationState == .background {
+                // フォアグランドに戻った時に反映できるよう取っておく
+                self.bgActivity = activity
+            } else {
+                self.bgActivity = nil
+                // viewへの反映はメインスレッドで行う
+                DispatchQueue.main.async(execute: {
+                    self.updateViews(activity)
+                })
+            }
             
             // ログ書き込み
             do {
                 try self.logFileManager.appendLog(activity: activity)
             } catch let error as NSError {
-                if !self.isAppendLogError {
+                if !self.isAppendLogError && UIApplication.shared.applicationState != .background {
                     self.isAppendLogError = true
-                    let alertController = UIAlertController(title: "ログ書き込みエラー",
-                                                            message: "空き容量不足などが考えられます。アプリを再インストールするなどして、ログを削除してください。\n\n\(error)",
-                                                            preferredStyle: .alert)
-                    let action = UIAlertAction(title: "OK", style: .default, handler: nil)
-                    alertController.addAction(action)
-                    self.present(alertController, animated: true, completion: nil)
+                    DispatchQueue.main.async(execute: {
+                        let alertController = UIAlertController(title: "ログ書き込みエラー",
+                                                                message: "空き容量不足などが考えられます。アプリを再インストールするなどして、ログを削除してください。\n\n\(error)",
+                            preferredStyle: .alert)
+                        let action = UIAlertAction(title: "OK", style: .default, handler: nil)
+                        alertController.addAction(action)
+                        self.present(alertController, animated: true, completion: nil)
+                    })
                 }
             }
         })
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // MARK: - Private Methods
+    
+    func applicationWillEnterForeground(_ notification: NSNotification?) {
+        if let activity = bgActivity {
+            // バックグラウンドで更新されたデータをviewへ反映する
+            print("updateLastBackgroundMotionActivity date: \(activity.startDate)")
+            updateViews(activity)
+            bgActivity = nil
+        }
+    }
+    
+    private func updateViews(_ activity: CMMotionActivity) {
+        stationaryLabel.textColor = activity.stationary.color
+        walkingLabel.textColor = activity.walking.color
+        runningLabel.textColor = activity.running.color
+        automotiveLabel.textColor = activity.automotive.color
+        cyclingLabel.textColor = activity.cycling.color
+        unknownLabel.textColor = activity.unknown.color
+        
+        confidenceLabel.text = activity.confidence.description
     }
 }

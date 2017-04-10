@@ -27,7 +27,7 @@ class LogFileManager {
             
             // ファイルの最後に追記
             fileHandle.seekToEndOfFile()
-            fileHandle.write(logString(activity).data(using: String.Encoding.utf8)!)
+            fileHandle.write(logString(activity).data(using: String.Encoding.shiftJIS)!)
         } catch let error as NSError {
             print("failed to append: \(error)")
             throw error
@@ -53,8 +53,8 @@ class LogFileManager {
         print("log file URL: \(String(describing: fileURL))")
         
         do {
-            let initialText = "Time\tStationary\tWalking\tRunning\tAutomotive\tCycling\tUnknown\tConfidence\tLat\tLon\tAccuracy\n"
-            try initialText.write(to: fileURL!, atomically: true, encoding: String.Encoding.utf8)
+            let initialText = "Time,Stationary,Walking,Running,Automotive,Cycling,Unknown,Confidence,Lat,Lon,Accuracy\n"
+            try initialText.write(to: fileURL!, atomically: true, encoding: String.Encoding.shiftJIS)
         } catch let error as NSError {
             print("failed to create file, error: \(error)")
         }
@@ -63,15 +63,15 @@ class LogFileManager {
     private func logString(_ activity: CMMotionActivity) -> String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.dateFormat = "yyyy/MM/dd HH:mm:ss"
+        formatter.dateFormat = "yyyy/MM/dd HH:mm:ss.sss"
         
         var logArray = [formatter.string(from: Date())]
-        logArray.append(activity.stationary.description)
-        logArray.append(activity.walking.description)
-        logArray.append(activity.running.description)
-        logArray.append(activity.automotive.description)
-        logArray.append(activity.cycling.description)
-        logArray.append(activity.unknown.description)
+        logArray.append(activity.stationary.string)
+        logArray.append(activity.walking.string)
+        logArray.append(activity.running.string)
+        logArray.append(activity.automotive.string)
+        logArray.append(activity.cycling.string)
+        logArray.append(activity.unknown.string)
         logArray.append(activity.confidence.description)
         
         if let location = lastLocation {
@@ -80,6 +80,6 @@ class LogFileManager {
             logArray.append("\(String(describing: location.horizontalAccuracy))")
         }
         
-        return logArray.joined(separator: "\t") + "\n"
+        return logArray.joined(separator: ",") + "\n"
     }
 }

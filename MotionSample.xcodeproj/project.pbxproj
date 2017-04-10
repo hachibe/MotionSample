@@ -196,6 +196,11 @@
 					8C327AFF1E998DD2008550F8 = {
 						CreatedOnToolsVersion = 8.3.1;
 						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
+						};
 					};
 					8C327B131E998DD2008550F8 = {
 						CreatedOnToolsVersion = 8.3.1;

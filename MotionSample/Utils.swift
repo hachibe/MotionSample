@@ -16,6 +16,13 @@ extension Bool {
     }
 }
 
+extension Bool {
+    /// Bool値によって文字を指定
+    var string: String {
+        return self ? "○" : ""
+    }
+}
+
 extension CMMotionActivityConfidence {
     var description: String {
         switch self {
