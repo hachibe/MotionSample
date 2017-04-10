@@ -66,12 +66,12 @@ class LogFileManager {
         formatter.dateFormat = "yyyy/MM/dd HH:mm:ss.sss"
         
         var logArray = [formatter.string(from: Date())]
-        logArray.append(activity.stationary.string)
-        logArray.append(activity.walking.string)
-        logArray.append(activity.running.string)
-        logArray.append(activity.automotive.string)
-        logArray.append(activity.cycling.string)
-        logArray.append(activity.unknown.string)
+        logArray.append(activity.stationary.mark)
+        logArray.append(activity.walking.mark)
+        logArray.append(activity.running.mark)
+        logArray.append(activity.automotive.mark)
+        logArray.append(activity.cycling.mark)
+        logArray.append(activity.unknown.mark)
         logArray.append(activity.confidence.description)
         
         if let location = lastLocation {
