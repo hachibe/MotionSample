@@ -17,7 +17,7 @@ class LogFileManager {
     var lastLocation: CLLocation?
     
     /// MotionActivityのデータを追記する
-    func appendLog(activity: CMMotionActivity) {
+    func appendLog(activity: CMMotionActivity) throws {
         guard let `fileURL` = fileURL else {
             return
         }
@@ -30,6 +30,7 @@ class LogFileManager {
             fileHandle.write(logString(activity).data(using: String.Encoding.utf8)!)
         } catch let error as NSError {
             print("failed to append: \(error)")
+            throw error
         }
     }
     

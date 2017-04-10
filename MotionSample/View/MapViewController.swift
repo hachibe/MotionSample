@@ -35,9 +35,14 @@ class MapViewController: UIViewController {
         
         // 地図の下に隠れないように一番上に持ってくる
         self.view.bringSubview(toFront: currentLocationButton)
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
         
         switch CLLocationManager.authorizationStatus() {
         case .restricted, .denied:
+            // viewDidLoadだとalertが表示されないため、ここで処理する
             let alertController = UIAlertController(title: "位置情報サービスがオフ",
                                                     message: "現在地を取得するために、位置情報サービスをオンにしてください",
                                                     preferredStyle: .alert)
@@ -55,7 +60,18 @@ class MapViewController: UIViewController {
     // MARK: - Action
     
     @IBAction func currentLocationButtonDidTouch(_ sender: UIButton) {
-        mapView.setCenter(mapView.userLocation.coordinate, animated: true)
+        if let location = mapView.userLocation.location {
+            if CLLocationCoordinate2DIsValid(location.coordinate) {
+                mapView.setCenter(location.coordinate, animated: true)
+            }
+        } else {
+            let alertController = UIAlertController(title: "位置情報エラー",
+                                                    message: "現在地が取得できていません",
+                                                    preferredStyle: .alert)
+            let action = UIAlertAction(title: "OK", style: .default, handler: nil)
+            alertController.addAction(action)
+            self.present(alertController, animated: true, completion: nil)
+        }
     }
 }
 
@@ -85,7 +101,15 @@ extension MapViewController: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
         print("didChangeAuthorization: \(status.rawValue)")
         switch status {
-        case .authorizedAlways, .authorizedWhenInUse:
+        case .authorizedWhenInUse:
+            let alertController = UIAlertController(title: "位置情報サービス設定",
+                                                    message: "このAppの使用中しか許可されていないため、バックグラウンドではログが保存されません。バックグラウンドでも保存するには、位置情報サービスを常に許可に設定してください",
+                                                    preferredStyle: .alert)
+            let action = UIAlertAction(title: "OK", style: .default, handler: nil)
+            alertController.addAction(action)
+            self.present(alertController, animated: true, completion: nil)
+            fallthrough
+        case .authorizedAlways:
             locationManager.startUpdatingLocation()
             mapView.showsUserLocation = true
         default:

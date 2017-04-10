@@ -23,13 +23,16 @@ class MotionViewController: UIViewController {
     
     private let logFileManager = LogFileManager.sharedInstance
     private var motionActivityManager: CMMotionActivityManager?
+    /// ログ書き込みに失敗したら1度だけアラートを表示させる
+    private var isAppendLogError = false
     
     // MARK: - View Life Cycle
     
-    override func viewDidLoad() {
-        super.viewDidLoad()
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
         
-        if CMMotionActivityManager.isActivityAvailable() {
+        if !CMMotionActivityManager.isActivityAvailable() {
+            // viewDidLoadだとalertが表示されないため、ここで処理する
             let alertController = UIAlertController(title: "MotionActivity未サポート",
                                                     message: "MotionActivityのデータを取得するには、M7コプロセッサを搭載した端末(iPhone5s以上)が必要です",
                                                     preferredStyle: .alert)
@@ -40,28 +43,34 @@ class MotionViewController: UIViewController {
         }
         
         motionActivityManager = CMMotionActivityManager()
-    }
-    
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
         motionActivityManager?.startActivityUpdates(to: OperationQueue.main, withHandler: { [weak self] (motionActivity: CMMotionActivity?) -> Void in
-            DispatchQueue.main.async(execute: {
-                guard let activity = motionActivity, let `self` = self else {
-                    return
+            guard let activity = motionActivity, let `self` = self else {
+                return
+            }
+            
+            self.stationaryLabel.textColor = activity.stationary.color
+            self.walkingLabel.textColor = activity.walking.color
+            self.runningLabel.textColor = activity.running.color
+            self.automotiveLabel.textColor = activity.automotive.color
+            self.cyclingLabel.textColor = activity.cycling.color
+            self.unknownLabel.textColor = activity.unknown.color
+            
+            self.confidenceLabel.text = activity.confidence.description
+            
+            // ログ書き込み
+            do {
+                try self.logFileManager.appendLog(activity: activity)
+            } catch let error as NSError {
+                if !self.isAppendLogError {
+                    self.isAppendLogError = true
+                    let alertController = UIAlertController(title: "ログ書き込みエラー",
+                                                            message: "空き容量不足などが考えられます。アプリを再インストールするなどして、ログを削除してください。\n\n\(error)",
+                                                            preferredStyle: .alert)
+                    let action = UIAlertAction(title: "OK", style: .default, handler: nil)
+                    alertController.addAction(action)
+                    self.present(alertController, animated: true, completion: nil)
                 }
-                
-                self.stationaryLabel.textColor = activity.stationary.color
-                self.walkingLabel.textColor = activity.walking.color
-                self.runningLabel.textColor = activity.running.color
-                self.automotiveLabel.textColor = activity.automotive.color
-                self.cyclingLabel.textColor = activity.cycling.color
-                self.unknownLabel.textColor = activity.unknown.color
-                
-                self.confidenceLabel.text = activity.confidence.description
-                
-                self.logFileManager.appendLog(activity: activity)
-            })
+            }
         })
     }
 }
