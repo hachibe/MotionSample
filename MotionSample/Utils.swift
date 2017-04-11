@@ -10,15 +10,15 @@ import UIKit
 import CoreMotion
 
 extension Bool {
-    /// Bool値によって色を指定
+    /// Bool値に応じた色を取得
     var color: UIColor {
         return self ? .red : .gray
     }
 }
 
 extension Bool {
-    /// Bool値によって文字を指定
-    var string: String {
+    /// Bool値に応じたマークを取得
+    var mark: String {
         return self ? "○" : ""
     }
 }
